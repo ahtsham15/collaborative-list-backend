@@ -96,3 +96,106 @@ class TaskDoView(APIView):
                 {"status": "error", "message": f"An error occured: {str(e)}"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+
+class TaskDoViewDetail(APIView):
+    def get(self, request, id):
+        if not request.user.is_authenticated:
+            return Response(
+                {"status": "error", "message": "Access token not provided or invalid"},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+        try:
+            user_id = request.user.id
+            try:
+                user = User.objects.get(id=user_id)
+            except User.DoesNotExist:
+                return Response(
+                    {"status": "error", "message": "User not found"},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+            try:
+                task = TaskDo.objects.get(id=id)
+            except TaskDo.DoesNotExist:
+                return Response(
+                    {"status": "error", "message": "Task not found"},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+            serializer = TaskDoSerializer(task)
+            return Response(
+                {"status": "success", "data": serializer.data},
+                status=status.HTTP_200_OK,
+            )
+        except Exception as e:
+            return Response(
+                {"status": "error", "message": f"An error occured: {str(e)}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+    def patch(self, request, id):
+        if not request.user.is_authenticated:
+            return Response(
+                {"status": "error", "message": "Access token not provided or invalid"},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+        try:
+            print(request.user.id)
+            user_id = request.user.id
+            try:
+                user = User.objects.get(id=user_id)
+            except User.DoesNotExist:
+                return Response(
+                    {"status": "error", "message": "User not found"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            try:
+                task = TaskDo.objects.get(id=id)
+            except TaskDo.DoesNotExist:
+                return Response({
+                    "status":"error",
+                    "message":"Task not found"
+                },status=status.HTTP_400_BAD_REQUEST)
+            print("The task is", task)
+            serializer = TaskDoSerializer(task, data=request.data, partial=True)
+            if serializer.is_valid():
+                return Response({
+                    "status":"sccuess",
+                    "message":'Task is updated',
+                    "data":serializer.data
+                },status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response(
+                {"status": "error", "message": f"An error occured: {str(e)}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+    def delete(self, request, id):
+        if not request.user.is_authenticated:
+            return Response(
+                {"status": "error", "message": "Access token not provided or invalid"},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+        try:
+            task = TaskDo.objects.get(id=id)
+            if task:
+                room_name = "test_consumer_group"
+                serializer = TaskDoSerializer(task)
+                send_task_update_message(
+                    room_name,
+                    {"message": "Task Delete Successfully", "data": serializer.data},
+                )
+                task.delete()
+                return Response(
+                    {"status": "success", "message": "Task deleted successfully"},
+                    status=status.HTTP_200_OK,
+                )
+            else:
+                return Response(
+                    {"status": "error", "message": "Task not found"},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+        except Exception as e:
+            return Response(
+                {"status": "error", "message": f"An error occured: {str(e)}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
